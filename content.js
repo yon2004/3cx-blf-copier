@@ -92,47 +92,63 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       console.log('Finished adding items. Total items:', blfItems.length);
 
       // Helper to set ng-select value asynchronously
-      async function setNgSelectValue(ngSelectElem, searchValue) {
+      async function setNgSelectValue(ngSelectElem, searchValue, maxWaitTime = 5000) {
         console.log('Attempting to set ng-select value:', searchValue);
         return new Promise((resolve) => {
-          if (!ngSelectElem) {
-            console.error('ngSelect element not found');
-            resolve(false);
-            return;
-          }
-          const container = ngSelectElem.querySelector('.ng-select-container');
-          if (container) {
-            console.log('Clicking ng-select container');
-            container.click();
-          } else {
-            console.error('ng-select container not found');
-            resolve(false);
-            return;
-          }
-
-          const input = ngSelectElem.querySelector('.ng-input input');
-          if (!input) {
-            console.error('ng-select input not found');
-            resolve(false);
-            return;
-          }
-          console.log('Focusing input and setting value:', searchValue);
-          input.focus();
-          input.value = searchValue;
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-
-          setTimeout(() => {
-            const panel = document.querySelector('.ng-dropdown-panel');
-            if (!panel) {
-              console.error('Dropdown panel not found');
-              resolve(false);
-              return;
-            }
-            console.log('Dropdown panel found, selecting first option');
-            const options = panel.querySelectorAll('.ng-option');
-            options[0].click();
-            resolve(true);
-          }, 500); // Delay for options to load; adjust if needed
+      	if (!ngSelectElem) {
+      	  console.error('ngSelect element not found');
+      	  resolve(false);
+      	  return;
+      	}
+      	const container = ngSelectElem.querySelector('.ng-select-container');
+      	if (container) {
+      	  console.log('Clicking ng-select container');
+      	  container.click();
+      	} else {
+      	  console.error('ng-select container not found');
+      	  resolve(false);
+      	  return;
+      	}
+      
+      	const input = ngSelectElem.querySelector('.ng-input input');
+      	if (!input) {
+      	  console.error('ng-select input not found');
+      	  resolve(false);
+      	  return;
+      	}
+      	console.log('Focusing input and setting value:', searchValue);
+      	input.focus();
+      	input.value = searchValue;
+      	input.dispatchEvent(new Event('input', { bubbles: true }));
+      
+      	const startTime = Date.now();
+      	const checkInterval = setInterval(() => {
+      	  const panel = document.querySelector('.ng-dropdown-panel');
+      	  if (!panel) {
+      		console.log('Dropdown panel not found, still waiting...');
+      		if (Date.now() - startTime >= maxWaitTime) {
+      		  console.error('Timeout: Dropdown panel not found after waiting.');
+      		  clearInterval(checkInterval);
+      		  resolve(false);
+      		}
+      		return;
+      	  }
+      
+      	  const options = panel.querySelectorAll('.ng-option');
+      	  if (options.length > 0 && options[0].textContent !== 'No items found') {
+      		console.log('Valid option found, selecting first option');
+      		options[0].click();
+      		clearInterval(checkInterval);
+      		resolve(true);
+      	  } else {
+      		console.log('No valid options yet, still waiting...');
+      		if (Date.now() - startTime >= maxWaitTime) {
+      		  console.error('Timeout: No valid options found after waiting.');
+      		  clearInterval(checkInterval);
+      		  resolve(false);
+      		}
+      	  }
+      	}, 125);
         });
       }
 
@@ -164,7 +180,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // Handle conditional fields based on type
         if (['BLF', 'Speed dial', 'Shared parking'].includes(dataItem.type) && dataItem.peer) {
           console.log(`Attempting to set peer for item ${itemIndex}. Value: ${dataItem.peer}`);
-          await new Promise(resolve => setTimeout(resolve, 650)); // Increased delay for peer field to render
+          //await new Promise(resolve => setTimeout(resolve, 100)); // Increased delay for peer field to render
           const peerNgSelect = targetItem.querySelector('app-dn-select ng-select[data-qa="select"]');
           if (!peerNgSelect) {
             console.error(`Peer ng-select not found for item ${itemIndex}`);
@@ -195,7 +211,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           }
         } else if (dataItem.type === 'Custom speed dial') {
           console.log(`Setting custom fields for item ${itemIndex}`);
-          await new Promise(resolve => setTimeout(resolve, 500));
+          //await new Promise(resolve => setTimeout(resolve, 500));
           const valueInput = targetItem.querySelector('field-input[data-qa="value"] input');
           const firstNameInput = targetItem.querySelector('field-input[data-qa="first-name"] input');
           const lastNameInput = targetItem.querySelector('field-input[data-qa="last-name"] input');
@@ -222,7 +238,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           }
         } else if (['Agent login/logout', 'Change Status'].includes(dataItem.type) && dataItem.value) {
           console.log(`Setting value for item ${itemIndex}. Value: ${dataItem.value}`);
-          await new Promise(resolve => setTimeout(resolve, 500));
+          //await new Promise(resolve => setTimeout(resolve, 500));
           const valueNgSelect = targetItem.querySelector('ng-select[data-qa="value"]') || targetItem.querySelector('field-select[data-qa="value"] ng-select');
           const valueSet = await setNgSelectValue(valueNgSelect, dataItem.value);
           if (!valueSet) {
