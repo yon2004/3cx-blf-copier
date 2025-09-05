@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "3CX BLF Copier",
+  "version": "1.0",
+  "description": "Copy BLF configs between 3CX v20 extensions",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["https://your-3cx-domain.com/*"],  // Replace with your actual 3CX console URL pattern
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://your-3cx-domain.com/*"],  // Replace with your actual 3CX console URL pattern
+      "js": ["content.js"]
+    }
+  ]
+}
